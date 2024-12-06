@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Price Predictor v2.0</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #0a0a1f;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+        /* Container Styling */
+        .container {
+            background: #12123f;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 25px rgba(0, 200, 255, 0.3);
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .container:hover {
+            transform: translateY(-5px);
+        }
+        /* Header */
+        .container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2em;
+            color: #00caff;
+        }
+        /* Form Styling */
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px 15px;
+            margin: 5px 0 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        input:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 5px #00caff;
+        }
+        input[type="number"], select {
+            background: #1a1a3f;
+            color: #fff;
+        }
+        button {
+            background: #00caff;
+            color: #0a0a1f;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        button:hover {
+            background: #0099cc;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        /* Result Display */
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        .good {
+            background: #143;
+            color: #0f0;
+        }
+        .bad {
+            background: #412;
+            color: #f00;
+        }
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #00caff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Prediction History */
+        #history {
+            margin-top: 25px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #1a1a3f;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        #history table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #history th, #history td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+        #history th {
+            background: #00caff;
+            color: #0a0a1f;
+            position: sticky;
+            top: 0;
+        }
+        /* Buttons for History and Model */
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .action-buttons button {
+            width: 48%;
+            background: #304;
+            color: #fff;
+        }
+        .action-buttons button:hover {
+            background: #405;
+        }
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            .container h2 {
+                font-size: 1.5em;
+            }
+            input, select, button {
+                font-size: 0.9em;
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Price Predictor v2.0</h2>
+        <form id="predictionForm">
+            <label for="sqft">Square Feet:</label>
+            <input type="number" id="sqft" placeholder="Enter square feet" min="100" max="10000" required>
+
+            <label for="beds">Bedrooms:</label>
+            <input type="number" id="beds" placeholder="Enter number of bedrooms" min="1" max="10" required>
+
+            <label for="baths">Bathrooms:</label>
+            <input type="number" id="baths" placeholder="Enter number of bathrooms" min="1" max="10" required>
+
+            <button type="submit">Predict Price</button>
+        </form>
+
+        <div id="result"></div>
+
+        <div class="action-buttons">
+            <button id="toggleHistory">Show History</button>
+            <button id="resetHistory">Clear History</button>
+        </div>
+
+        <div id="history">
+            <h3>Prediction History</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Sq Ft</th>
+                        <th>Beds</th>
+                        <th>Baths</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <!-- History rows will appear here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-buttons" style="margin-top: 15px;">
+            <button id="saveModel">Save Model</button>
+            <button id="loadModel">Load Model</button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" style="position: absolute; top: 10px; right: 10px; display: none;">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- TensorFlow.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script>
+        let model;
+        let predictionHistory = [];
+        const maxHistory = 10; // Maximum number of history entries
+
+        const loadingIndicator = document.getElementById('loading');
+        const resultDiv = document.getElementById('result');
+        const historyDiv = document.getElementById('history');
+        const historyBody = document.getElementById('historyBody');
+        const toggleHistoryBtn = document.getElementById('toggleHistory');
+        const resetHistoryBtn = document.getElementById('resetHistory');
+        const saveModelBtn = document.getElementById('saveModel');
+        const loadModelBtn = document.getElementById('loadModel');
+
+        // Show Loading Indicator
+        function showLoading() {
+            loadingIndicator.style.display = 'block';
+        }
+        // Hide Loading Indicator
+        function hideLoading() {
+            loadingIndicator.style.display = 'none';
+        }
+
+        // Initialize or Load Model
+        async function initModel() {
+            showLoading();
+            try {
+                if (localStorage.getItem('tfjs-model')) {
+                    // Load model from local storage
+                    const modelJson = JSON.parse(localStorage.getItem('tfjs-model'));
+                    model = await tf.loadLayersModel(tf.io.fromMemory(modelJson.modelTopology, modelJson.weightSpecs, modelJson.weightData));
+                    console.log('Model loaded from local storage.');
+                } else {
+                    // Build and train a new model
+                    model = tf.sequential();
+                    model.add(tf.layers.dense({
+                        inputShape: [3],
+                        units: 12,
+                        activation: 'relu'
+                    }));
+                    model.add(tf.layers.dense({ units: 8, activation: 'relu' }));
+                    model.add(tf.layers.dense({ units: 1 }));
+
+                    model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+
+                    // Generate synthetic data
+                    const x = [];
+                    const y = [];
+                    for (let i = 0; i < 500; i++) {
+                        let s = Math.random() * 3000 + 1000; // Square feet between 1000 and 4000
+                        let b = Math.floor(Math.random() * 5) + 1; // 1 to 5 bedrooms
+                        let t = Math.floor(Math.random() * 3) + 1; // 1 to 3 bathrooms
+
+                        x.push([s / 3000, b / 5, t / 3]);
+                        y.push([(s * 200 + b * 50000 + t * 25000) / 1000000]);
+                    }
+
+                    const xs = tf.tensor2d(x);
+                    const ys = tf.tensor2d(y);
+
+                    // Train the model
+                    await model.fit(xs, ys, {
+                        epochs: 100,
+                        batchSize: 32,
+                        callbacks: {
+                            onEpochEnd: (epoch, logs) => {
+                                console.log(`Epoch ${epoch + 1}: loss = ${logs.loss.toFixed(4)}`);
+                            }
+                        }
+                    });
+
+                    // Dispose tensors
+                    xs.dispose();
+                    ys.dispose();
+
+                    console.log('New model trained.');
+                }
+            } catch (e) {
+                console.error('Error initializing the model:', e);
+                alert('Failed to initialize the model. Check console for details.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Save Model to Local Storage
+        async function saveModel() {
+            try {
+                showLoading();
+                const saveResults = await model.save('localstorage://tfjs-model');
+                const modelArtifacts = await model.save(tf.io.browserLocalStorage.getLocalStorageKey('tfjs-model'));
+                // Serialize model to store in memory or send to server
+                // For simplicity, we'll store it in localStorage as JSON
+                const modelJson = {
+                    modelTopology: model.toJSON().modelTopology,
+                    weightSpecs: model.toJSON().weightSpecs,
+                    weightData: Array.from(new Uint8Array(model.toJSON().weightData))
+                };
+                localStorage.setItem('tfjs-model', JSON.stringify(modelJson));
+                alert('Model saved to local storage.');
+            } catch (e) {
+                console.error('Error saving the model:', e);
+                alert('Failed to save the model. Check console for details.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load Model from Local Storage
+        async function loadModel() {
+            try {
+                showLoading();
+                if (localStorage.getItem('tfjs-model')) {
+                    const modelJson = JSON.parse(localStorage.getItem('tfjs-model'));
+                    model = await tf.loadLayersModel(tf.io.fromMemory(
+                        modelJson.modelTopology,
+                        modelJson.weightSpecs,
+                        new Uint8Array(modelJson.weightData)
+                    ));
+                    alert('Model loaded from local storage.');
+                } else {
+                    alert('No saved model found in local storage.');
+                }
+            } catch (e) {
+                console.error('Error loading the model:', e);
+                alert('Failed to load the model. Check console for details.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Predict Function
+        async function predictPrice(event) {
+            event.preventDefault();
+            showLoading();
+            try {
+                const sqft = parseFloat(document.getElementById('sqft').value);
+                const beds = parseInt(document.getElementById('beds').value);
+                const baths = parseInt(document.getElementById('baths').value);
+
+                if (isNaN(sqft) || isNaN(beds) || isNaN(baths)) {
+                    throw new Error('All inputs must be valid numbers.');
+                }
+
+                // Normalize inputs
+                const inputTensor = tf.tensor2d([[sqft / 3000, beds / 5, baths / 3]]);
+                const prediction = model.predict(inputTensor);
+                const price = (await prediction.data())[0] * 1000000;
+                inputTensor.dispose();
+                prediction.dispose();
+
+                displayResult(price);
+                addToHistory(sqft, beds, baths, price);
+            } catch (e) {
+                console.error('Prediction error:', e);
+                displayResult('Error: Invalid input or model not initialized.', false);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Display Prediction Result
+        function displayResult(message, isGood = true) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = isGood ? 'good' : 'bad';
+            if (isGood) {
+                resultDiv.innerHTML = `✅ Estimated Price: $${priceFormatter(message)}`;
+            } else {
+                resultDiv.textContent = message;
+            }
+        }
+
+        // Format Price
+        function priceFormatter(price) {
+            return Number(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Add Prediction to History
+        function addToHistory(sqft, beds, baths, price) {
+            if (predictionHistory.length >= maxHistory) {
+                predictionHistory.shift(); // Remove oldest entry
+            }
+            predictionHistory.push({ sqft, beds, baths, price });
+            updateHistoryUI();
+        }
+
+        // Update History Table
+        function updateHistoryUI() {
+            historyBody.innerHTML = '';
+            predictionHistory.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    ${index + 1}
+                    ${entry.sqft}
+                    ${entry.beds}
+                    ${entry.baths}
+                    $${priceFormatter(entry.price)}</td>
+                `;
+                historyBody.appendChild(row);
+            });
+        }
+
+        // Toggle History Display
+        toggleHistoryBtn.addEventListener('click', () => {
+            if (historyDiv.style.display === 'none' || historyDiv.style.display === '') {
+                historyDiv.style.display = 'block';
+                toggleHistoryBtn.textContent = 'Hide History';
+            } else {
+                historyDiv.style.display = 'none';
+                toggleHistoryBtn.textContent = 'Show History';
+            }
+        });
+
+        // Reset History
+        resetHistoryBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the prediction history?')) {
+                predictionHistory = [];
+                updateHistoryUI();
+                alert('Prediction history cleared.');
+            }
+        });
+
+        // Save Model Button
+        saveModelBtn.addEventListener('click', saveModel);
+
+        // Load Model Button
+        loadModelBtn.addEventListener('click', loadModel);
+
+        // Form Submission
+        document.getElementById('predictionForm').addEventListener('submit', predictPrice);
+
+        // Initialize the Model on Page Load
+        window.addEventListener('load', initModel);
+    </script>
+</body>
+</html>
